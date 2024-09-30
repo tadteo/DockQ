@@ -6,9 +6,9 @@ rm -f test .coverage
 PYTHON=${1:-"python"}
 
 if command -v coverage &> /dev/null; then
-    binary="coverage run --parallel-mode -m DockQ.DockQ "
+    binary="coverage run --parallel-mode -m DockQ"
 else
-    binary="$PYTHON -m DockQ.DockQ"
+    binary="$PYTHON -m DockQ"
 fi
 
 $binary examples/1A2K_r_l_b.model.pdb examples/1A2K_r_l_b.pdb > test
@@ -51,9 +51,10 @@ diff <(grep -v "*" test) <(grep -v "*" testdata/6q2n_peptide.dockq)
 $binary examples/1HHO_hem.cif examples/2HHB_hem.cif --small_molecule --mapping :ABEFG > test
 
 # Test that cython version behaves the same as nocython
-$PYTHON src/DockQ/DockQ.py examples/1A2K_r_l_b.model.pdb examples/1A2K_r_l_b.pdb > test
+$PYTHON -c "from DockQ.core import scoring" > /dev/null 2>&1 || true
+$PYTHON -m DockQ.cli examples/1A2K_r_l_b.model.pdb examples/1A2K_r_l_b.pdb > test
 diff <(grep -v "*" test) <(grep -v "*" testdata/1A2K.dockq)
-$PYTHON src/DockQ/DockQ.py examples/1A2K_r_l_b.model.pdb examples/1A2K_r_l_b.pdb --no_align > test
+$PYTHON -m DockQ.cli examples/1A2K_r_l_b.model.pdb examples/1A2K_r_l_b.pdb --no_align > test
 diff <(grep -v "*" test) <(grep -v "*" testdata/1A2K.dockq)
 
 if command -v coverage &> /dev/null; then
