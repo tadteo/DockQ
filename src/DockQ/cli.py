@@ -12,7 +12,7 @@ from .core.scoring import calc_DockQ, calc_sym_corrected_lrmsd, run_on_all_nativ
 from .io.pdb_loader import load_PDB
 from .io.output import print_results
 from .utils.helpers import format_mapping, group_chains, get_all_chain_maps, count_chain_combinations, format_mapping_string
-
+from .io.network_loader import create_structure_from_network
 
 def parse_args():
     parser = ArgumentParser(
@@ -87,6 +87,16 @@ def parse_args():
             in the interface between chains B and C, the flag can be set as: '--mapping :BC'
             or the equivalent '--mapping *:BC'.""",
     )
+    parser.add_argument(
+        "--model_structure",
+        default=None,
+        help="Model structure data (as a dictionary) instead of a file path",
+    )
+    parser.add_argument(
+        "--native_structure",
+        default=None,
+        help="Native structure data (as a dictionary) instead of a file path",
+    )
 
     return parser.parse_args()
 
@@ -100,12 +110,21 @@ def main():
     initial_mapping, model_chains, native_chains = format_mapping(
         args.mapping, args.small_molecule
     )
-    model_structure = load_PDB(
-        args.model, chains=model_chains, small_molecule=args.small_molecule
-    )
-    native_structure = load_PDB(
-        args.native, chains=native_chains, small_molecule=args.small_molecule
-    )
+
+    if args.model_structure:
+        model_structure = create_structure_from_network(args.model_structure)
+    else:
+        model_structure = load_PDB(
+            args.model, chains=model_chains, small_molecule=args.small_molecule
+        )
+
+    if args.native_structure:
+        native_structure = create_structure_from_network(args.native_structure)
+    else:
+        native_structure = load_PDB(
+            args.native, chains=native_chains, small_molecule=args.small_molecule
+        )
+
     # check user-given chains are in the structures
     model_chains = [c.id for c in model_structure] if not model_chains else model_chains
     native_chains = (

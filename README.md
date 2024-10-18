@@ -245,6 +245,42 @@ run_on_all_native_interfaces(model, native, chain_map=chain_map)
    'chain_map': {'A': 'A', 'B': 'B'}}},
  0.9425398964102757)
 ```
+**Using DockQ with OpenFold Output**
+
+DockQ now supports direct input from OpenFold output structures. This allows for seamless integration between OpenFold predictions and DockQ scoring.
+
+```{python}
+from DockQ.DockQ import run_on_all_native_interfaces
+from DockQ.io.network_loader import create_structure_from_openfold
+from DockQ.io.pdb_loader import load_PDB
+
+# Load OpenFold output
+openfold_model_output = {...}  # OpenFold output structure data
+openfold_native_output = {...}  # Native structure data
+
+# Convert OpenFold output to DockQ-compatible structures
+model = create_structure_from_openfold(openfold_model_output)
+native = create_structure_from_openfold(openfold_native_output)
+
+# Define chain mapping
+chain_map = {"A":"A", "B":"B"}
+
+# Run DockQ
+results, total_dockq = run_on_all_native_interfaces(model, native, chain_map=chain_map)
+```
+This new functionality allows DockQ to work directly with OpenFold output structures, eliminating the need for intermediate PDB file creation.
+
+## Working with OpenFold Structures
+
+DockQ now includes a `create_structure_from_openfold` function in the `network_loader` module. This function converts OpenFold output data into a Bio.PDB.Structure object that can be used with DockQ:
+
+```{python}
+from DockQ.io.network_loader import create_structure_from_openfold
+openfold_output = {...} # OpenFold output structure data
+structure = create_structure_from_openfold(openfold_output, structure_id="openfold_output")
+```
+This function allows for direct integration between OpenFold and DockQ, streamlining the workflow for structure prediction and quality assessment.
+
 
 **Merge multiple chains in a single receptor or ligand**
 

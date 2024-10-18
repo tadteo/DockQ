@@ -16,6 +16,19 @@ def calc_DockQ(
     capri_peptide=False,
     low_memory=False,
 ):
+    """
+    Calculate DockQ score for protein-protein docking.
+
+    Args:
+        sample_chains (tuple): Two chains from the sample (model) structure.
+        ref_chains (tuple): Two chains from the reference (native) structure.
+        alignments (tuple): Alignments between sample and reference chains.
+        capri_peptide (bool): Whether to use CAPRI peptide thresholds.
+        low_memory (bool): If True, return only DockQ score without additional info.
+
+    Returns:
+        dict: DockQ score and additional metrics if low_memory is False.
+    """
 
     fnat_threshold = FNAT_THRESHOLD if not capri_peptide else FNAT_THRESHOLD_PEPTIDE
     interface_threshold = (
@@ -166,6 +179,17 @@ def calc_sym_corrected_lrmsd(
     ref_chains,
     alignments,
 ):
+    """
+    Calculate symmetry-corrected LRMSD for protein-ligand docking.
+
+    Args:
+        sample_chains (tuple): Two chains from the sample (model) structure.
+        ref_chains (tuple): Two chains from the reference (native) structure.
+        alignments (tuple): Alignments between sample and reference chains.
+
+    Returns:
+        dict: LRMSD score and additional information.
+    """
     import networkx as nx
 
     is_het_sample_0 = bool(sample_chains[0].is_het)
@@ -263,6 +287,17 @@ def calc_sym_corrected_lrmsd(
     return info
 
 def dockq_formula(fnat, irms, lrms):
+    """
+    Calculate DockQ score using fnat, iRMS, and LRMS.
+
+    Args:
+        fnat (float): Fraction of native contacts.
+        irms (float): Interface RMSD.
+        lrms (float): Ligand RMSD.
+
+    Returns:
+        float: DockQ score.
+    """
     return (
         float(fnat)
         + 1 / (1 + (irms / 1.5) * (irms / 1.5))
@@ -270,8 +305,18 @@ def dockq_formula(fnat, irms, lrms):
     ) / 3
 
 def f1(tp, fp, p):
-    return 2 * tp / (tp + fp + p)
+    """
+    Calculate F1 score.
 
+    Args:
+        tp (int): True positives.
+        fp (int): False positives.
+        p (int): Total positives.
+
+    Returns:
+        float: F1 score.
+    """
+    return 2 * tp / (tp + fp + p)
 
 @lru_cache
 def run_on_chains(
@@ -282,7 +327,22 @@ def run_on_chains(
     small_molecule=True,
     low_memory=False,
 ):
-    # realign each model chain against the corresponding native chain
+    """
+    Run DockQ or LRMSD calculation on given chains.
+
+    Args:
+        model_chains (tuple): Two chains from the model structure.
+        native_chains (tuple): Two chains from the native structure.
+        no_align (bool): If True, use residue numbering instead of sequence alignment.
+        capri_peptide (bool): Whether to use CAPRI peptide thresholds.
+        small_molecule (bool): If True, use LRMSD calculation for small molecules.
+        low_memory (bool): If True, return only essential information.
+
+    Returns:
+        dict: DockQ or LRMSD score and additional metrics.
+    """
+
+    # Align each model chain against the corresponding native chain
     alignments = []
     for model_chain, native_chain in zip(model_chains, native_chains):
         aln = align_chains(
@@ -294,6 +354,7 @@ def run_on_chains(
         alignments.append(tuple(alignment.values()))
 
     if not small_molecule:
+        # Calculate DockQ for protein-protein docking
         info = calc_DockQ(
             model_chains,
             native_chains,
@@ -302,13 +363,13 @@ def run_on_chains(
             low_memory=low_memory,
         )
     else:
+        # Calculate symmetry-corrected LRMSD for protein-ligand docking
         info = calc_sym_corrected_lrmsd(
             model_chains,
             native_chains,
             alignments=tuple(alignments),
         )
     return info
-
 
 def run_on_all_native_interfaces(
     model_structure,
@@ -318,8 +379,20 @@ def run_on_all_native_interfaces(
     capri_peptide=False,
     low_memory=False,
 ):
-    """Given a native-model chain map, finds all non-null native interfaces
-    and runs DockQ for each native-model pair of interfaces"""
+    """
+    Run DockQ or LRMSD calculation on all non-null native interfaces.
+
+    Args:
+        model_structure: The model structure.
+        native_structure: The native structure.
+        chain_map (dict): Mapping between native and model chain IDs.
+        no_align (bool): If True, use residue numbering instead of sequence alignment.
+        capri_peptide (bool): Whether to use CAPRI peptide thresholds.
+        low_memory (bool): If True, return only essential information.
+
+    Returns:
+        tuple: A dictionary of results for each interface and the total DockQ score.
+    """
     result_mapping = dict()
     native_chain_ids = list(chain_map.keys())
 
@@ -354,5 +427,3 @@ def run_on_all_native_interfaces(
                 result_mapping["".join(chain_pair)] = info
     total_dockq = sum([result["DockQ"] for result in result_mapping.values()])
     return result_mapping, total_dockq
-
-
